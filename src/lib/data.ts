@@ -92,9 +92,56 @@ export const experience = [
   },
 ];
 
+/** One world per group in the Signals voyage; `tagline` is its one-line
+ *  story under the title. */
 export const skillGroups = [
-  { label: "GenAI & LLMs", items: ["LangChain", "LlamaIndex", "RAG Pipelines", "ChromaDB", "Fine-Tuning", "Stable Diffusion", "FastAPI"] },
-  { label: "ML / AI", items: ["Transformers", "LoRA / PEFT", "BERT", "Quantization", "XGBoost", "EfficientNet"] },
-  { label: "Data Engineering", items: ["Apache Spark", "PySpark", "Airflow", "Delta Lake", "Kafka", "Databricks"] },
-  { label: "Cloud & Data", items: ["AWS", "MongoDB", "PostgreSQL", "MySQL", "DuckDB", "Trino"] },
+  {
+    label: "GenAI & LLMs",
+    tagline: "Agents, retrieval and fine-tuned models that answer in production.",
+    items: ["LangChain", "LlamaIndex", "RAG Pipelines", "ChromaDB", "Fine-Tuning", "Stable Diffusion", "FastAPI"],
+  },
+  {
+    label: "ML / AI",
+    tagline: "Models trained, compressed and measured until they earn their place.",
+    items: ["Transformers", "LoRA / PEFT", "BERT", "Quantization", "XGBoost", "EfficientNet", "Scikit-learn"],
+  },
+  {
+    label: "Data Engineering",
+    tagline: "Pipelines that turn raw events into clean, queryable truth.",
+    items: ["Apache Spark", "PySpark", "Airflow", "Delta Lake", "Kafka", "Databricks"],
+  },
+  {
+    label: "Cloud & Data",
+    tagline: "The storage and infrastructure everything else runs on.",
+    items: ["AWS", "MongoDB", "PostgreSQL", "MySQL", "DuckDB", "Trino", "Docker"],
+  },
+];
+
+export type NetworkProject = {
+  /** Short name drawn beside the project's star. */
+  name: string;
+  /** Set for projects that also have a Work chapter (matches Project.slug). */
+  slug?: string;
+  /** Skills (exact `skillGroups` item names) actually used in this project. */
+  skills: string[];
+};
+
+/** Which skills went into which project. */
+export const networkProjects: NetworkProject[] = [
+  {
+    name: "Emotion Classifier",
+    slug: "emotion-classifier",
+    skills: ["Transformers", "LoRA / PEFT", "Fine-Tuning", "Quantization", "Scikit-learn"],
+  },
+  { name: "Churn Leakage Eval", skills: ["Scikit-learn", "Docker"] },
+  {
+    name: "LLM Observability",
+    slug: "llm-observability",
+    skills: ["Apache Spark", "PySpark", "Airflow", "Delta Lake", "Trino", "Databricks", "Docker"],
+  },
+  {
+    name: "Plant Easy Care",
+    slug: "plant-easy-care",
+    skills: ["EfficientNet", "FastAPI", "AWS", "MongoDB"],
+  },
 ];
