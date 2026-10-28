@@ -7,3 +7,6 @@ in src/lib/data.ts:
 
 Video: short loop (5-15s), 16:9 or 16:10, no audio needed (it autoplays muted).
 Image: a clean screenshot of the app/dashboard in its best-looking state.
+
+Until a project has media, its mission frame shows its `flow` (the steps
+of the system) instead.

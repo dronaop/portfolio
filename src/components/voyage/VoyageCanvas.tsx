@@ -30,12 +30,19 @@ function rgb(hex: string): [number, number, number] {
 }
 const COLORS = WORLD_COLORS.map(rgb);
 
+const FORWARD = new THREE.Vector3(0, 0, -1);
+const hole = new THREE.Vector3();
+const start = new THREE.Vector3();
+const stop = new THREE.Vector3();
+const aim = new THREE.Vector3();
+
 /** How far back the worlds sit while their skills are read. */
 const HOLD_DEPTH = 6;
 /** How much further away each world starts before rushing in. */
 const RUSH_DISTANCE = 140;
-/** How far ahead of the last world the black hole waits. */
-const HOLE_DEPTH = 70;
+/** How far ahead of the last world the black hole waits: far enough to be
+ *  a small, distant thing in its sky. */
+const HOLE_DEPTH = 120;
 
 /** Where everything sits, for a screen of this size. Each world is a big
  *  planet rising from the bottom, leaving the sky above for its skills.
@@ -58,9 +65,16 @@ function layoutFor(width: number, height: number) {
     peak - radius,
     -HOLD_DEPTH,
   ]);
-  // Dead ahead of the last world, a speck at first.
-  const hole: [number, number, number] = [(skillGroups.length - 1) * spacing, 0, -HOLE_DEPTH];
-  return { wide, spacing, radius, planets, hole, holeRadius: 0.5 * visibleHeight };
+  // In the last world's empty sky: above its planet, clear of its skills.
+  const toHole = (CAMERA_Z + HOLE_DEPTH) / CAMERA_Z;
+  const hole: [number, number, number] = [
+    (skillGroups.length - 1) * spacing + (wide ? -0.25 * visibleWidth : 0) * toHole,
+    (wide ? 0.25 : -0.13) * visibleHeight * toHole,
+    -HOLE_DEPTH,
+  ];
+  // Where the camera sees it from as the fall begins.
+  const holeViewer: [number, number, number] = [(skillGroups.length - 1) * spacing, 0, CAMERA_Z];
+  return { wide, spacing, radius, planets, hole, holeViewer, holeRadius: 0.5 * visibleHeight };
 }
 
 export default function VoyageCanvas({
@@ -129,19 +143,22 @@ function Scene({
 
   // The camera rig runs before everything else each frame (negative
   // priority), so the worlds and the black hole move with this frame's view.
-  // The fall: the camera is pulled straight at the black hole, faster and
-  // faster, rolling as it spirals in, and stops just outside the horizon,
-  // which by then fills the whole view.
+  // The fall: the camera turns to the black hole and is pulled straight at
+  // it, faster and faster, rolling as it spirals in, and stops just outside
+  // the horizon, which by then fills the whole view.
   useFrame(({ camera }) => {
     const beats = beatsAt(progress.get());
     beatsRef.current = beats;
-    const [, hy, hz] = layout.hole;
     const pull = pullAt(beats.dive);
-    const closest = hz + layout.holeRadius * 1.6;
+    const turn = THREE.MathUtils.smoothstep(beats.dive, 0.08, 0.6);
     const roll = reduceMotion ? 0 : pull * 1.3;
-    camera.position.set(stationAt(beats) * layout.spacing, hy * pull, CAMERA_Z + (closest - CAMERA_Z) * pull);
+    hole.set(...layout.hole);
+    start.set(stationAt(beats) * layout.spacing, 0, CAMERA_Z);
+    stop.subVectors(start, hole).setLength(layout.holeRadius * 1.6).add(hole);
+    camera.position.lerpVectors(start, stop, pull);
+    aim.subVectors(hole, camera.position).normalize().lerp(FORWARD, 1 - turn).add(camera.position);
     camera.up.set(-Math.sin(roll), Math.cos(roll), 0);
-    camera.lookAt(camera.position.x, camera.position.y, camera.position.z - 10);
+    camera.lookAt(aim);
   }, -1);
 
   return (
@@ -161,9 +178,11 @@ function Scene({
       <BlackHole
         position={layout.hole}
         radius={layout.holeRadius}
+        viewer={layout.holeViewer}
         holeRef={holeRef}
         reduceMotion={reduceMotion}
-        appear={() => THREE.MathUtils.smoothstep(beatsRef.current.dive, 0.04, 0.3)}
+        // Out of the dark only once the last world has been read.
+        fade={() => THREE.MathUtils.smoothstep(beatsRef.current.dive, 0, 0.18)}
       />
     </>
   );

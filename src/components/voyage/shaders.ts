@@ -344,6 +344,7 @@ uniform float uRs;
 uniform vec3 uNormal;
 uniform vec3 uAxis;
 uniform float uTime;
+uniform float uFade;
 varying vec3 vWorld;
 ${NOISE}
 
@@ -405,6 +406,6 @@ void main() {
       if(cover>.98) break;
     }
   }
-  gl_FragColor=vec4(1.-exp(-col*1.4),cover);
+  gl_FragColor=vec4(1.-exp(-col*1.4),cover)*uFade;
 }
 `;

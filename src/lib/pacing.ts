@@ -1,3 +1,5 @@
+import { easeInOut } from "framer-motion";
+
 /**
  * Scroll pacing for pinned scenes, written in vh: screen-heights of scroll
  * (100 = one screen). Readers scroll at their own steady speed, so how long
@@ -18,4 +20,13 @@ export function pacing(length: number) {
     /** Pinned progress range for [start, end] vh. */
     span: (start: number, end: number): [number, number] => [at(start), at(end)],
   };
+}
+
+/** For a row of `count` panels, each held still for `hold` vh of scroll and
+ *  then eased to the next over `travel` vh: which panel is in view (0 =
+ *  first, fractions between) `vh` into the row. */
+export function heldStation(vh: number, count: number, hold: number, travel: number) {
+  const leg = Math.min(Math.max(Math.floor(vh / (hold + travel)), 0), count - 2);
+  const within = Math.min(Math.max((vh - leg * (hold + travel) - hold) / travel, 0), 1);
+  return leg + easeInOut(within);
 }

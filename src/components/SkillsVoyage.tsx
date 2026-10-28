@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 import dynamic from "next/dynamic";
-import { motion, useReducedMotion, useTransform } from "framer-motion";
+import { motion, useAnimationFrame, useMotionValue, useReducedMotion, useTransform } from "framer-motion";
 import { skillGroups } from "@/lib/data";
 import { usePinnedProgress } from "@/lib/use-pinned-progress";
 import { ChapterLabel } from "@/components/ui/chapter-label";
@@ -102,9 +102,18 @@ export default function SkillsVoyage({
   }, [progress, shaderUniformsRef, reduceMotion]);
 
   const station = useTransform(progress, (p) => stationAt(beatsAt(p)));
-  // The last world's skills are dragged into the black hole at the center
-  // of the screen, swirling the way the camera rolls, and swallowed.
-  const swallow = useTransform(progress, (p) => ramp(beatsAt(p).dive, [0, 0.45]) ** 1.4);
+  // The last world's skills are pulled into the black hole ahead of the
+  // camera, wherever it is on screen, swirling the way the camera rolls.
+  const holeX = useMotionValue(0.5);
+  const holeY = useMotionValue(0.5);
+  useAnimationFrame(() => {
+    if (!activeRef.current) return;
+    holeX.set(holeRef.current[0]);
+    holeY.set(holeRef.current[1]);
+  });
+  const swallow = useTransform(progress, (p) => ramp(beatsAt(p).dive, [0.08, 0.5]) ** 1.4);
+  const swallowX = useTransform([swallow, holeX], ([s, x]: number[]) => `${(x - 0.5) * 100 * s}vw`);
+  const swallowY = useTransform([swallow, holeY], ([s, y]: number[]) => `${(y - 0.5) * 100 * s}vh`);
   const swallowScale = useTransform(swallow, [0, 1], [1, 0.04]);
   const swallowRotate = useTransform(swallow, [0, 1], [0, reduceMotion ? 0 : 50]);
   const swallowOpacity = useTransform(swallow, [0.6, 1], [1, 0]);
@@ -163,7 +172,14 @@ export default function SkillsVoyage({
         </motion.div>
 
         <motion.div
-          style={{ scale: swallowScale, rotate: swallowRotate, opacity: swallowOpacity, filter: swallowBlur }}
+          style={{
+            x: swallowX,
+            y: swallowY,
+            scale: swallowScale,
+            rotate: swallowRotate,
+            opacity: swallowOpacity,
+            filter: swallowBlur,
+          }}
           className="absolute inset-0 z-10 overflow-hidden"
         >
           <HorizontalTrack position={station}>

@@ -8,7 +8,11 @@ export type Project = {
   link?: string;
   linkLabel?: string;
   accent: string;
-  /** Screen content for the laptop mockup. Omit to show the placeholder. */
+  /** The system, as the steps a signal passes through. Shown in the mission
+   *  frame until there is `media`. */
+  flow: string[];
+  /** A screen recording or screenshot for the mission frame (see
+   *  public/projects/README.md). */
   media?: { type: "video"; src: string } | { type: "image"; src: string };
 };
 
@@ -27,6 +31,7 @@ export const projects: Project[] = [
     ],
     tech: ["Airflow", "PySpark", "Delta Lake", "Kinesis", "Trino", "Metabase", "Docker"],
     accent: "#7c8cff",
+    flow: ["Kinesis Firehose", "Airflow + PySpark", "Delta Lake", "Trino SQL", "Metabase"],
     // media: { type: "video", src: "/projects/llm-observability.mp4" },
   },
   {
@@ -45,6 +50,7 @@ export const projects: Project[] = [
     link: "https://github.com/dronaop",
     linkLabel: "View on GitHub",
     accent: "#ff8a5c",
+    flow: ["Classify", "Log uncertain", "Retrain QLoRA", "Benchmark F1", "Promote adapter"],
     // media: { type: "video", src: "/projects/emotion-classifier.mp4" },
   },
   {
@@ -63,6 +69,7 @@ export const projects: Project[] = [
     link: "https://github.com/dronaop",
     linkLabel: "View on GitHub",
     accent: "#4cd6b0",
+    flow: ["Leaf photo", "EfficientNet", "TF Serving", "FastAPI", "AWS"],
     // media: { type: "image", src: "/projects/plant-easy-care.jpg" },
   },
 ];

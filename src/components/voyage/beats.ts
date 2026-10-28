@@ -1,6 +1,6 @@
 import { easeInOut } from "framer-motion";
 import { skillGroups } from "@/lib/data";
-import { pacing } from "@/lib/pacing";
+import { heldStation, pacing } from "@/lib/pacing";
 
 /**
  * The Signals chapter's timeline, paced in vh of scroll and exported as
@@ -57,12 +57,9 @@ export type Beats = {
 };
 
 export function beatsAt(p: number): Beats {
-  const voyage = (p - VOYAGE[0]) / SIGNALS.at(1);
-  const leg = Math.min(Math.max(Math.floor(voyage / (WORLD_HOLD + WORLD_TRAVEL)), 0), WORLDS - 2);
-  const within = clamp01((voyage - leg * (WORLD_HOLD + WORLD_TRAVEL) - WORLD_HOLD) / WORLD_TRAVEL);
   return {
     approach: easeInOut(ramp(p, APPROACH)),
-    world: leg + easeInOut(within),
+    world: heldStation((p - VOYAGE[0]) / SIGNALS.at(1), WORLDS, WORLD_HOLD, WORLD_TRAVEL),
     dive: ramp(p, DIVE),
     emerge: ramp(p, EMERGE),
   };
