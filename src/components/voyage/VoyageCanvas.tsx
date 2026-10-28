@@ -5,14 +5,15 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import type { MotionValue } from "framer-motion";
 import { skillGroups } from "@/lib/data";
-import { WORLD_COLORS, beatsAt, stationAt } from "./beats";
+import { WORLD_COLORS, beatsAt, pullAt, stationAt } from "./beats";
 import Planet from "./Planet";
 import BlackHole, { type HoleState } from "./BlackHole";
 
 /**
  * The Signals chapter's 3D voyage, on a transparent canvas over the hero's
- * space backdrop: the camera flies sideways past one planet per skill group
- * (its skills orbiting as moons), then turns to a black hole and dives in.
+ * space backdrop: the camera flies sideways over one planet per skill group,
+ * each a horizon below that group's skills (page text), then turns to a
+ * black hole and dives in.
  * Scroll drives everything through the shared beats, read every frame, so
  * nothing re-renders while scrolling. Loaded lazily by SkillsVoyage.
  */
@@ -22,11 +23,6 @@ const CAMERA_Z = 10;
 const KINDS = [0, 1, 2, 3];
 /** The Data Engineering world wears a ring. */
 const RINGED = 2;
-/** A little depth between the worlds, so they don't sit on one plane. */
-const DEPTHS = [0, -1.2, 0.4, -0.6];
-
-const SKILLS = skillGroups.flatMap((group) => group.items);
-const LABEL_STARTS = skillGroups.map((_, g) => skillGroups.slice(0, g).reduce((n, group) => n + group.items.length, 0));
 
 function rgb(hex: string): [number, number, number] {
   const n = parseInt(hex.slice(1), 16);
@@ -34,24 +30,37 @@ function rgb(hex: string): [number, number, number] {
 }
 const COLORS = WORLD_COLORS.map(rgb);
 
-/** Where everything sits, for a screen of this size. Wide: worlds alternate
- *  left and right of center (their titles take the other side). Narrow:
- *  worlds sit in the upper half, titles below. One world per `spacing`,
- *  matching one screen of titles per world. */
+/** How far back the worlds sit while their skills are read. */
+const HOLD_DEPTH = 6;
+/** How much further away each world starts before rushing in. */
+const RUSH_DISTANCE = 140;
+/** How far ahead of the last world the black hole waits. */
+const HOLE_DEPTH = 70;
+
+/** Where everything sits, for a screen of this size. Each world is a big
+ *  planet rising from the bottom, leaving the sky above for its skills.
+ *  Wide: it peaks to one side, opposite the text, alternating. Narrow:
+ *  centered. Worlds are more than a screen apart so only one shows at a
+ *  time. Sizes are in screens, scaled out to HOLD_DEPTH. */
 function layoutFor(width: number, height: number) {
   const visibleHeight = 2 * CAMERA_Z * Math.tan(THREE.MathUtils.degToRad(FOV / 2));
   const visibleWidth = (visibleHeight * width) / height;
   const wide = width >= 768 && width >= height;
-  const spacing = (wide ? 0.85 : 1) * visibleWidth;
-  const radius = wide ? 0.19 * visibleHeight : 0.22 * visibleWidth;
+  const toDepth = (CAMERA_Z + HOLD_DEPTH) / CAMERA_Z;
+  // Worlds alternate sides, so every other gap is 0.6 screens shorter;
+  // even that one stays well over a screen.
+  const spacing = 2 * visibleWidth * toDepth;
+  const radius = (wide ? 0.42 : 0.7) * visibleWidth * toDepth;
+  // The top of each sphere, from the screen's center.
+  const peak = (wide ? 0 : -0.22) * visibleHeight * toDepth;
   const planets = skillGroups.map((_, g): [number, number, number] => [
-    // The ringed world is wider, so it sits further out.
-    g * spacing + (wide ? (g % 2 ? 1 : -1) * (g === RINGED ? 0.29 : 0.24) * visibleWidth : 0),
-    wide ? 0 : 0.17 * visibleHeight,
-    DEPTHS[g],
+    g * spacing + (wide ? (g % 2 ? -1 : 1) * 0.3 * visibleWidth * toDepth : 0),
+    peak - radius,
+    -HOLD_DEPTH,
   ]);
-  const hole: [number, number, number] = [(skillGroups.length - 1 + 1.5) * spacing, 0, -2];
-  return { wide, spacing, radius, planets, hole, holeRadius: 0.2 * visibleHeight };
+  // Dead ahead of the last world, a speck at first.
+  const hole: [number, number, number] = [(skillGroups.length - 1) * spacing, 0, -HOLE_DEPTH];
+  return { wide, spacing, radius, planets, hole, holeRadius: 0.5 * visibleHeight };
 }
 
 export default function VoyageCanvas({
@@ -66,13 +75,6 @@ export default function VoyageCanvas({
   /** Written every frame: where the black hole is on screen. */
   holeRef: RefObject<HoleState>;
 }) {
-  const labelsRef = useRef<(HTMLElement | null)[]>([]);
-  const placeLabel = useCallback((index: number, x: number, y: number, opacity: number) => {
-    const label = labelsRef.current[index];
-    if (!label) return;
-    label.style.opacity = String(opacity);
-    label.style.transform = `translate3d(${x + 12}px, ${y}px, 0) translateY(-50%)`;
-  }, []);
   const [{ reduceMotion, narrow }] = useState(() => ({
     reduceMotion: window.matchMedia("(prefers-reduced-motion: reduce)").matches,
     narrow: window.innerWidth < 768,
@@ -88,32 +90,19 @@ export default function VoyageCanvas({
         camera={{ fov: FOV, position: [0, 0, CAMERA_Z], near: 0.1, far: 200 }}
         style={{ position: "absolute", inset: 0 }}
       >
-        <Scene progress={progress} placeLabel={placeLabel} holeRef={holeRef} reduceMotion={reduceMotion} detail={narrow ? 64 : 128} />
+        <Scene progress={progress} holeRef={holeRef} reduceMotion={reduceMotion} detail={narrow ? 64 : 128} />
       </Canvas>
-      <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-        {SKILLS.map((name, i) => (
-          <div
-            key={name}
-            ref={(el) => void (labelsRef.current[i] = el)}
-            className="absolute left-0 top-0 whitespace-nowrap text-[11px] font-medium tracking-wide text-white/85 opacity-0 [text-shadow:0_0_10px_rgba(5,6,10,0.95)] sm:text-[13px]"
-          >
-            {name}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
 
 function Scene({
   progress,
-  placeLabel,
   holeRef,
   reduceMotion,
   detail,
 }: {
   progress: MotionValue<number>;
-  placeLabel: (index: number, x: number, y: number, opacity: number) => void;
   holeRef: RefObject<HoleState>;
   reduceMotion: boolean;
   detail: number;
@@ -121,20 +110,38 @@ function Scene({
   const width = useThree((state) => state.size.width);
   const height = useThree((state) => state.size.height);
   const layout = useMemo(() => layoutFor(width, height), [width, height]);
-  const station = useRef(0);
+  const beatsRef = useRef(beatsAt(0));
+
+  // Each world starts as a point of light far ahead and rushes in over the
+  // leg that brings it into view (the first, over the approach), slowing
+  // as it arrives.
+  const placePlanet = useCallback(
+    (g: number, planet: THREE.Group) => {
+      const { approach, world } = beatsRef.current;
+      const arrival = g === 0 ? approach : THREE.MathUtils.clamp(world - (g - 1), 0, 1);
+      const [x, y, z] = layout.planets[g];
+      planet.position.set(x, y, z - (1 - arrival) ** 2 * RUSH_DISTANCE);
+      planet.scale.setScalar(THREE.MathUtils.smoothstep(arrival, 0, 0.12));
+      planet.visible = arrival > 0;
+    },
+    [layout],
+  );
 
   // The camera rig runs before everything else each frame (negative
-  // priority), so moons and the black hole project with this frame's view.
+  // priority), so the worlds and the black hole move with this frame's view.
+  // The fall: the camera is pulled straight at the black hole, faster and
+  // faster, rolling as it spirals in, and stops just outside the horizon,
+  // which by then fills the whole view.
   useFrame(({ camera }) => {
     const beats = beatsAt(progress.get());
-    station.current = stationAt(beats);
-    const [hx, hy, hz] = layout.hole;
-    const push = THREE.MathUtils.smoothstep(beats.dive, 0.35, 1) ** 1.4;
-    // Stops just outside the horizon, by then filling the whole view.
+    beatsRef.current = beats;
+    const [, hy, hz] = layout.hole;
+    const pull = pullAt(beats.dive);
     const closest = hz + layout.holeRadius * 1.6;
-    camera.position.set(station.current * layout.spacing, hy * push, CAMERA_Z + (closest - CAMERA_Z) * push);
-    // Ease the aim onto the black hole as the camera turns to it.
-    camera.lookAt(camera.position.x + (hx - camera.position.x) * push * 0.2, hy * push, camera.position.z - 10);
+    const roll = reduceMotion ? 0 : pull * 1.3;
+    camera.position.set(stationAt(beats) * layout.spacing, hy * pull, CAMERA_Z + (closest - CAMERA_Z) * pull);
+    camera.up.set(-Math.sin(roll), Math.cos(roll), 0);
+    camera.lookAt(camera.position.x, camera.position.y, camera.position.z - 10);
   }, -1);
 
   return (
@@ -144,17 +151,20 @@ function Scene({
           key={group.label}
           kind={KINDS[g]}
           color={COLORS[g]}
-          position={layout.planets[g]}
-          radius={g === RINGED ? layout.radius * 0.8 : layout.radius}
+          radius={layout.radius}
           ring={g === RINGED}
-          skills={group.items}
-          placeLabel={(i, x, y, opacity) => placeLabel(LABEL_STARTS[g] + i, x, y, opacity)}
-          focus={() => 1 - THREE.MathUtils.smoothstep(Math.abs(station.current - g), 0.2, 0.55)}
           reduceMotion={reduceMotion}
           detail={detail}
+          place={(planet) => placePlanet(g, planet)}
         />
       ))}
-      <BlackHole position={layout.hole} radius={layout.holeRadius} holeRef={holeRef} reduceMotion={reduceMotion} />
+      <BlackHole
+        position={layout.hole}
+        radius={layout.holeRadius}
+        holeRef={holeRef}
+        reduceMotion={reduceMotion}
+        appear={() => THREE.MathUtils.smoothstep(beatsRef.current.dive, 0.04, 0.3)}
+      />
     </>
   );
 }

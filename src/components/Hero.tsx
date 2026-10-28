@@ -4,19 +4,21 @@ import { type RefObject } from "react";
 import { easeIn, motion, useReducedMotion, useScroll, useSpring, useTransform } from "framer-motion";
 import { ArrowRight, ChevronDown, Mail } from "lucide-react";
 import { ChapterLabel } from "@/components/ui/chapter-label";
+import { pacing } from "@/lib/pacing";
 
 /**
- * Hero over a sticky 175vh section — one full screen of content (name,
- * three headline facts, CTAs), then the warp: scrolling scales the content
- * up past the camera while the shared space backdrop behind it (see
+ * Hero over a pinned section — one full screen of content (name, CTAs),
+ * then the warp: scrolling scales the content up past the camera while the shared space backdrop behind it (see
  * SpaceScene) flies forward through the stars, and the first chapter line
- * ("Every system starts as noise.") holds over the settling starfield.
+ * ("Every system starts as noise.") holds over the settling starfield, then
+ * scrolls away as the next chapter rises in.
  */
-const FACTS = [
-  { title: "LLM observability in production", detail: "Airflow + PySpark into Delta Lake, tracked in Metabase" },
-  { title: "Self-improving classifier", detail: "Ships a new adapter only on F1 gain" },
-  { title: "12-language LLM translation", detail: "Fine-tuned TinyLlama (QLoRA) pipeline" },
-];
+export const HERO = pacing(190);
+/** The warp, in vh of scroll (see lib/pacing). */
+export const WARP_VH = 100;
+const INTRO_OUT = HERO.span(5, 60);
+const LINE_IN = HERO.span(70, 100);
+
 
 export default function Hero({ sectionRef }: { sectionRef: RefObject<HTMLDivElement | null> }) {
   const reduceMotion = useReducedMotion();
@@ -32,17 +34,20 @@ export default function Hero({ sectionRef }: { sectionRef: RefObject<HTMLDivElem
     mass: 0.4,
   });
 
-  const introOpacity = useTransform(smoothProgress, [0.04, 0.4], [1, 0]);
-  const introScale = useTransform(smoothProgress, [0, 0.4], [1, reduceMotion ? 1 : 1.8], {
+  const introOpacity = useTransform(smoothProgress, INTRO_OUT, [1, 0]);
+  const introScale = useTransform(smoothProgress, [0, INTRO_OUT[1]], [1, reduceMotion ? 1 : 1.8], {
     ease: easeIn,
   });
-  const introBlur = useTransform(smoothProgress, [0.1, 0.4], ["blur(0px)", "blur(10px)"]);
-  const introPointerEvents = useTransform(smoothProgress, (v) => (v < 0.15 ? "auto" : "none"));
-  const warpLineOpacity = useTransform(smoothProgress, [0.35, 0.5, 0.82, 0.97], [0, 1, 1, 0]);
-  const warpLineY = useTransform(smoothProgress, [0.35, 0.5], [24, 0]);
+  const introBlur = useTransform(smoothProgress, [HERO.at(15), INTRO_OUT[1]], ["blur(0px)", "blur(10px)"]);
+  const introPointerEvents = useTransform(smoothProgress, (v) => (v < HERO.at(20) ? "auto" : "none"));
+  // The line stays up for the rest of the pin (about a screen of scroll),
+  // slowly pushing in, and leaves by scrolling off with the section.
+  const warpLineOpacity = useTransform(smoothProgress, LINE_IN, [0, 1]);
+  const warpLineY = useTransform(smoothProgress, LINE_IN, [24, 0]);
+  const warpLineScale = useTransform(smoothProgress, [LINE_IN[0], 1], [0.97, reduceMotion ? 0.97 : 1.03]);
 
   return (
-    <section ref={sectionRef} className="relative h-[175vh]">
+    <section ref={sectionRef} className="relative" style={{ height: HERO.height }}>
       <div className="sticky top-0 h-screen w-full overflow-hidden">
         <motion.div
           style={{
@@ -59,20 +64,6 @@ export default function Hero({ sectionRef }: { sectionRef: RefObject<HTMLDivElem
           <h1 className="bg-gradient-to-r from-[#7c8cff] via-[#ff8a5c] to-[#4cd6b0] bg-clip-text pb-2 text-5xl font-semibold leading-[1.08] tracking-tight text-transparent sm:text-7xl lg:text-[5.5rem]">
             Deepanshu Singh
           </h1>
-
-          <ul className="mt-8 grid w-full max-w-4xl grid-cols-1 gap-2 sm:mt-10 sm:grid-cols-3 sm:gap-3">
-            {FACTS.map((fact) => (
-              <li
-                key={fact.title}
-                className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left backdrop-blur-sm sm:px-5 sm:py-4"
-              >
-                <p className="text-sm font-semibold text-white/90">{fact.title}</p>
-                <p className="mt-1 text-xs leading-relaxed text-white/55 sm:text-[0.8rem]">
-                  {fact.detail}
-                </p>
-              </li>
-            ))}
-          </ul>
 
           <div className="mt-8 flex flex-col gap-3 sm:mt-10 sm:flex-row sm:gap-4">
             <a
@@ -99,7 +90,7 @@ export default function Hero({ sectionRef }: { sectionRef: RefObject<HTMLDivElem
         </motion.div>
 
         <motion.div
-          style={{ opacity: warpLineOpacity, y: warpLineY }}
+          style={{ opacity: warpLineOpacity, y: warpLineY, scale: warpLineScale }}
           className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center px-6 text-center"
         >
           <ChapterLabel id="data" />

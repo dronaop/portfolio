@@ -320,26 +320,91 @@ void main() {
 }
 `;
 
-/** The black hole's accretion disk: white-hot at its inner edge, cooling to
- *  ember red outward, streaked as it turns, and brighter on the side
- *  swinging toward the camera. `uLensed` is the far side of the disk, bent
- *  up and over the horizon into a halo, so it streaks around, not across. */
-export const diskFragment = /* glsl */ `
-uniform float uInner;
-uniform float uOuter;
-uniform float uTime;
-uniform float uLensed;
-uniform float uStrength;
-varying vec3 vPos;
-${NOISE}
+/** The black hole, ray traced on a camera-facing quad. Each pixel's light
+ *  ray is followed backwards from the camera as gravity bends it (the
+ *  Schwarzschild photon orbit, in units of the horizon radius `uRs`):
+ *  rays that fall below the horizon are black, and every time a ray
+ *  crosses the accretion disk's plane it picks up that bit of disk. So the
+ *  disk's far side shows arched over and under the shadow, a thin photon
+ *  ring hugs it, and the side of the disk turning toward the camera is
+ *  brighter (Doppler beaming). Output is premultiplied: the shadow hides
+ *  what is behind it, the disk glows over it. */
+export const holeVertex = /* glsl */ `
+varying vec3 vWorld;
 void main() {
-  float r=length(vPos.xy), t=(r-uInner)/(uOuter-uInner);
-  float a=atan(vPos.y,vPos.x);
-  float streaks=.55+.45*noise(vec3(t*28.,a*2.5-uTime*.35,0.))*noise(vec3(t*9.,a*6.-uTime*.6,3.));
-  float heat=pow(1.-t,mix(1.6,2.6,uLensed));
+  vec4 world=modelMatrix*vec4(position,1.);
+  vWorld=world.xyz;
+  gl_Position=projectionMatrix*viewMatrix*world;
+}
+`;
+
+export const holeFragment = /* glsl */ `
+uniform vec3 uCenter;
+uniform float uRs;
+uniform vec3 uNormal;
+uniform vec3 uAxis;
+uniform float uTime;
+varying vec3 vWorld;
+${NOISE}
+
+// In horizon radii: the disk from the innermost stable orbit outward, and
+// how far out light is bent enough to bother tracing.
+const float INNER=3.;
+const float OUTER=10.;
+const float BOUND=14.;
+
+// Disk light where a ray crosses it, at q, travelling along dir.
+vec4 diskAt(vec3 q, vec3 dir) {
+  float r=length(q), t=(r-INNER)/(OUTER-INNER);
+  if(t<0.||t>1.) return vec4(0.);
+  // Inner gas laps the outer (Kepler), streaking it around.
+  float a=atan(dot(q,cross(uNormal,uAxis)),dot(q,uAxis))-uTime*.9*pow(INNER/r,1.5);
+  vec2 around=vec2(cos(a),sin(a));
+  float streaks=.35+.65*noise(vec3(around*3.,r*2.2))*(.6+.4*noise(vec3(around*9.,r*7.+5.)));
+  // Orbital speed (as a fraction of light's), and how much that brightens
+  // the gas coming at the camera and dims the gas going away.
+  float beta=sqrt(.5/r);
+  vec3 orbit=normalize(cross(uNormal,q));
+  float shift=sqrt(1.-beta*beta)/(1.-beta*dot(orbit,-dir));
+  float heat=pow(1.-t,1.7)*sqrt(1.-1./r);
   vec3 col=mix(vec3(1.,.42,.12),vec3(1.,.93,.8),pow(1.-t,3.));
-  float doppler=1.+.65*cos(a)*(1.-uLensed);
-  float edge=smoothstep(0.,.04,t)*smoothstep(1.,.6,t);
-  gl_FragColor=vec4(col*heat*streaks*doppler*edge*uStrength*1.6,1.);
+  col=mix(col,vec3(.95,.97,1.),clamp((shift-1.)*1.5,0.,1.));
+  float edge=smoothstep(0.,.05,t)*smoothstep(1.,.55,t);
+  float density=clamp(heat*streaks*2.2,0.,.95)*edge;
+  return vec4(col*heat*streaks*pow(shift,2.5)*3.,density);
+}
+
+void main() {
+  vec3 dir=normalize(vWorld-cameraPosition);
+  vec3 p=(cameraPosition-uCenter)/uRs;
+  // Far out light runs straight, so start at the edge of the bent region.
+  float b=dot(p,dir), c=dot(p,p)-BOUND*BOUND;
+  if(c>0.) {
+    float h=b*b-c;
+    if(h<0.||b>0.) discard;
+    p+=dir*(-b-sqrt(h));
+  }
+  vec3 v=dir;
+  vec3 spin=cross(p,v);
+  float h2=dot(spin,spin);
+  vec3 col=vec3(0.);
+  float cover=0.;
+  for(int i=0;i<140;i++) {
+    float r=length(p);
+    if(r<1.) { cover=1.; break; }
+    if(r>BOUND+.5&&dot(p,v)>0.) break;
+    float dt=clamp(.08*r,.02,1.);
+    vec3 prev=p;
+    v+=-1.5*h2*p/pow(r,5.)*dt;
+    p+=v*dt;
+    float s0=dot(prev,uNormal), s1=dot(p,uNormal);
+    if(s0*s1<0.) {
+      vec4 disk=diskAt(mix(prev,p,s0/(s0-s1)),normalize(v));
+      col+=(1.-cover)*disk.rgb*disk.a;
+      cover+=(1.-cover)*disk.a;
+      if(cover>.98) break;
+    }
+  }
+  gl_FragColor=vec4(1.-exp(-col*1.4),cover);
 }
 `;

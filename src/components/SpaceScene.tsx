@@ -7,7 +7,7 @@ import {
   type ShaderUniformSource,
   type ShaderUniforms,
 } from "@/components/ui/animated-shader-hero";
-import Hero from "@/components/Hero";
+import Hero, { HERO, WARP_VH } from "@/components/Hero";
 import SkillsVoyage from "@/components/SkillsVoyage";
 import { usePinnedProgress } from "@/lib/use-pinned-progress";
 
@@ -20,16 +20,18 @@ import { usePinnedProgress } from "@/lib/use-pinned-progress";
  *    stars, then the scene settles to about half brightness instead of
  *    fading out.
  * 2. Voyage — behind the Signals chapter the stars keep drifting toward the
- *    viewer and pan sideways with its 3D camera, and bend around its black
- *    hole (see SkillsVoyage, which feeds those uniforms).
+ *    viewer, rush toward them between its worlds, pan sideways with its 3D
+ *    camera, and bend around its black hole (see SkillsVoyage, which feeds
+ *    those uniforms).
  * 3. After — the settled, dimmed sky stays behind the rest of the page.
  */
-const WARP_END = 0.8;
+const WARP_END = HERO.at(WARP_VH);
 /** Star layers flown through over the warp (1 = one full layer). */
 const WARP_DISTANCE = 3;
 /** Star layers drifted through across the whole Signals chapter. */
 const DRIFT_DISTANCE = 0.6;
-const SETTLE_START = 0.55;
+/** The sky settles over the hero's closing line. */
+const SETTLE = HERO.span(55, 150);
 /** How far the backdrop dims once settled behind the later chapters. */
 const SETTLE_DIM = 0.55;
 
@@ -53,25 +55,27 @@ export default function SpaceScene() {
   const getShaderUniforms = useCallback((now: number): Partial<ShaderUniforms> => {
     const p = smoothHero.get();
     const warp = clamp01(p / WARP_END);
-    const settle = clamp01((p - SETTLE_START) / (1 - SETTLE_START));
+    const settle = clamp01((p - SETTLE[0]) / (SETTLE[1] - SETTLE[0]));
     const dim = SETTLE_DIM * settle;
     // Tames the bright drifting lights so tool names stay readable over them.
     const soften = settle;
     const skills = skillUniformsRef.current?.(now);
     if (reduceMotion) return { dim, soften, ...skills };
 
-    // The pinned hero is short, so progress velocity runs high; scaled
-    // down to keep streak length comparable to a longer warp.
-    const speed = clamp01(Math.abs(smoothHero.getVelocity()) * 1.2) * (1 - settle);
+    // Scroll speed in screen-heights per second; about 60 a second is a
+    // full streak.
+    const vhPerSecond = Math.abs(smoothHero.getVelocity()) / HERO.at(1);
+    const speed = clamp01(vhPerSecond / 60) * (1 - settle);
     streakRef.current += (speed - streakRef.current) * 0.15;
 
+    // The voyage's own flight adds to the drift.
     return {
-      travel: easeInOut(warp) * WARP_DISTANCE + driftProgress.get() * DRIFT_DISTANCE,
+      ...skills,
+      travel: easeInOut(warp) * WARP_DISTANCE + driftProgress.get() * DRIFT_DISTANCE + (skills?.travel ?? 0),
       zoom: easeIn(warp),
       streak: streakRef.current,
       dim,
       soften,
-      ...skills,
     };
   }, [smoothHero, driftProgress, reduceMotion]);
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type RefObject } from "react";
 import dynamic from "next/dynamic";
-import { motion, useTransform } from "framer-motion";
+import { motion, useReducedMotion, useTransform } from "framer-motion";
 import { skillGroups } from "@/lib/data";
 import { usePinnedProgress } from "@/lib/use-pinned-progress";
 import { ChapterLabel } from "@/components/ui/chapter-label";
@@ -15,10 +15,14 @@ import {
   COURSE,
   DECODE,
   EMERGE,
+  SIGNALS,
+  STATEMENT_HOLD,
+  STATEMENT_OUT,
   VOYAGE,
   WORLDS,
   WORLD_COLORS,
   beatsAt,
+  pullAt,
   ramp,
   stationAt,
 } from "@/components/voyage/beats";
@@ -34,16 +38,17 @@ const START_STATION = stationAt(beatsAt(0));
  *
  * 1. Transmission — the chapter's statement decodes out of noise.
  * 2. Course set — "Four worlds. One mission." sweeps across the screen.
- * 3. The voyage — the camera flies sideways past four 3D worlds, one per
- *    skill group, its skills orbiting as moons, while each world's huge
- *    title slides by on the other side of the screen.
- * 4. Gargantua — the camera turns to a black hole and dives in until all
- *    is black, then comes out the other side into Production.
+ * 3. The voyage — the camera flies sideways over four 3D worlds, one per
+ *    skill group, each a planet's horizon with that group's skills huge in
+ *    the sky above it, sliding by a screen per world.
+ * 4. Gargantua — a black hole appears dead ahead and pulls everything in,
+ *    faster and faster: the last world's skills are dragged into it, the
+ *    camera spirals down until all is black, then comes out the other
+ *    side into Production.
  *
  * The worlds and black hole are a lazily loaded three.js canvas
  * (voyage/VoyageCanvas); the black hole also bends the backdrop's stars,
- * through `shaderUniformsRef`. All text is real HTML, and the skills are
- * also a plain list for screen readers.
+ * through `shaderUniformsRef`. All text is real HTML.
  */
 export default function SkillsVoyage({
   sectionRef,
@@ -58,6 +63,7 @@ export default function SkillsVoyage({
   const [active, setActive] = useState(false);
   const activeRef = useRef(false);
   const holeRef = useRef<HoleState>([0.5, 0.5, 0, 0]);
+  const reduceMotion = useReducedMotion();
 
   useEffect(() => {
     const target = sectionRef.current;
@@ -78,40 +84,51 @@ export default function SkillsVoyage({
   }, [sectionRef]);
 
   // The backdrop pans with the camera and bends its stars around the black
-  // hole, which fades as we come out the other side.
+  // hole, which fades as we come out the other side. Between worlds its
+  // stars fly at the viewer, fastest mid-leg.
   useEffect(() => {
     shaderUniformsRef.current = () => {
       const beats = beatsAt(progress.get());
       const [x, y, radius, strength] = holeRef.current;
-      return {
+      const uniforms = {
         pan: (stationAt(beats) - START_STATION) * 0.35,
-        hole: [x, y, radius, activeRef.current ? strength * (1 - beats.emerge) : 0],
+        hole: [x, y, radius, activeRef.current ? strength * (1 - beats.emerge) : 0] as HoleState,
       };
+      if (reduceMotion) return uniforms;
+      // Falling into the black hole, faster and faster.
+      return { ...uniforms, travel: (beats.approach + beats.world) * 0.8 + pullAt(beats.dive) * 2.5 };
     };
     return () => void (shaderUniformsRef.current = null);
-  }, [progress, shaderUniformsRef]);
+  }, [progress, shaderUniformsRef, reduceMotion]);
 
   const station = useTransform(progress, (p) => stationAt(beatsAt(p)));
-  // The titles step aside as the camera turns to the black hole.
-  const titlesOpacity = useTransform(progress, (p) => 1 - Math.min(beatsAt(p).dive / 0.3, 1));
+  // The last world's skills are dragged into the black hole at the center
+  // of the screen, swirling the way the camera rolls, and swallowed.
+  const swallow = useTransform(progress, (p) => ramp(beatsAt(p).dive, [0, 0.45]) ** 1.4);
+  const swallowScale = useTransform(swallow, [0, 1], [1, 0.04]);
+  const swallowRotate = useTransform(swallow, [0, 1], [0, reduceMotion ? 0 : 50]);
+  const swallowOpacity = useTransform(swallow, [0.6, 1], [1, 0]);
+  const swallowBlur = useTransform(swallow, [0, 1], ["blur(0px)", "blur(6px)"]);
 
   const decode = useTransform(progress, (p) => ramp(p, DECODE));
-  const statementOpacity = useTransform(progress, [0, 0.1, 0.14], [1, 1, 0]);
-  const statementX = useTransform(progress, [0.1, 0.14], ["0vw", "-30vw"]);
+  // Once decoded it drifts a little while it is read, then slides away.
+  const statementOpacity = useTransform(progress, [STATEMENT_HOLD, STATEMENT_OUT], [1, 0]);
+  const statementX = useTransform(progress, [DECODE[1], STATEMENT_HOLD, STATEMENT_OUT], ["0vw", "-2vw", "-30vw"]);
 
   // The course line crosses from just off the right edge to just off the left.
   const courseShift = useTransform(progress, COURSE, ["0vw", "-100vw"]);
   const courseSelf = useTransform(progress, COURSE, ["0%", "-100%"]);
   const trajectory = useTransform(progress, (p) => ramp(p, [COURSE[0], VOYAGE[1]]));
-  const hudOpacity = useTransform(progress, [VOYAGE[0] - 0.04, VOYAGE[0], VOYAGE[1], VOYAGE[1] + 0.04], [0, 1, 1, 0]);
+  const hudFade = SIGNALS.at(40);
+  const hudOpacity = useTransform(progress, [VOYAGE[0] - hudFade, VOYAGE[0], VOYAGE[1], VOYAGE[1] + hudFade], [0, 1, 1, 0]);
   const worldNumber = useTransform(station, (s) => String(Math.min(Math.max(Math.round(s), 0), WORLDS - 1) + 1).padStart(2, "0"));
 
   const canvasOpacity = useTransform(progress, (p) => 1 - ramp(p, EMERGE));
-  const emergeOpacity = useTransform(progress, [EMERGE[0], EMERGE[0] + 0.03], [0, 1]);
+  const emergeOpacity = useTransform(progress, EMERGE, [0, 1]);
   const emergeY = useTransform(progress, [EMERGE[0], EMERGE[1]], [24, 0]);
 
   return (
-    <section ref={sectionRef} id="skills" aria-labelledby="skills-heading" className="relative h-[800vh]">
+    <section ref={sectionRef} id="skills" aria-labelledby="skills-heading" className="relative" style={{ height: SIGNALS.height }}>
       <motion.div
         style={{ opacity: canvasOpacity, visibility: active ? "visible" : "hidden" }}
         className="pointer-events-none fixed inset-0"
@@ -145,13 +162,18 @@ export default function SkillsVoyage({
           </motion.p>
         </motion.div>
 
-        <HorizontalTrack position={station} style={{ opacity: titlesOpacity }} className="z-10">
-          {skillGroups.map((group, g) => (
-            <TrackPanel key={group.label}>
-              <WorldTitle index={g} label={group.label} tagline={group.tagline} count={group.items.length} />
-            </TrackPanel>
-          ))}
-        </HorizontalTrack>
+        <motion.div
+          style={{ scale: swallowScale, rotate: swallowRotate, opacity: swallowOpacity, filter: swallowBlur }}
+          className="absolute inset-0 z-10 overflow-hidden"
+        >
+          <HorizontalTrack position={station}>
+            {skillGroups.map((group, g) => (
+              <TrackPanel key={group.label}>
+                <WorldSkills index={g} {...group} />
+              </TrackPanel>
+            ))}
+          </HorizontalTrack>
+        </motion.div>
 
         <motion.div
           style={{ opacity: hudOpacity }}
@@ -176,52 +198,45 @@ export default function SkillsVoyage({
           </p>
         </motion.div>
 
-        <ul className="sr-only">
-          {skillGroups.map((group) => (
-            <li key={group.label}>
-              {group.label}: {group.items.join(", ")}
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   );
 }
 
-/** A world's title, on the opposite side of the screen from its planet
- *  (wide), or below it (narrow): a huge faint number behind a huge name. */
-function WorldTitle({
+/** A world's skills, in the sky above its planet's horizon, on the side
+ *  away from where the curve peaks: the proven ones huge, each with where
+ *  it was proven, then the rest in one line. */
+function WorldSkills({
   index,
   label,
-  tagline,
-  count,
+  highlights,
+  more,
 }: {
   index: number;
   label: string;
-  tagline: string;
-  count: number;
+  highlights: { skill: string; proof: string }[];
+  more: string[];
 }) {
-  const color = WORLD_COLORS[index];
-  const planetLeft = index % 2 === 0;
   return (
     <div
-      className={`absolute inset-x-6 bottom-[14%] sm:inset-x-10 md:bottom-auto md:top-1/2 md:w-[44%] md:-translate-y-1/2 ${
-        planetLeft ? "md:left-auto md:right-[6%]" : "md:left-[6%] md:right-auto"
+      className={`absolute inset-x-6 top-[14%] sm:inset-x-10 md:top-[16%] md:w-[52%] ${
+        index % 2 === 0 ? "md:left-[7%] md:right-auto" : "md:left-auto md:right-[7%]"
       }`}
     >
-      <span
-        aria-hidden
-        className="pointer-events-none absolute -top-[0.55em] left-0 select-none text-[34vw] font-black leading-none text-transparent [-webkit-text-stroke:1px_rgba(255,255,255,0.14)] md:-top-[0.45em] md:text-[17vw]"
-      >
-        {String(index + 1).padStart(2, "0")}
-      </span>
-      <p className="relative font-mono text-xs uppercase tracking-[0.35em]" style={{ color }}>
-        World {String(index + 1).padStart(2, "0")} · {count} skills in orbit
-      </p>
-      <h3 className="relative mt-3 text-5xl font-black leading-[0.92] tracking-tight text-white sm:text-6xl md:text-[5.6vw]">
-        {label}
+      <h3 className="font-mono text-xs uppercase tracking-[0.35em]" style={{ color: WORLD_COLORS[index] }}>
+        World {String(index + 1).padStart(2, "0")} · {label}
       </h3>
-      <p className="relative mt-5 max-w-md text-base leading-relaxed text-white/65 sm:text-lg">{tagline}</p>
+      <ul className="mt-6 space-y-5 md:mt-8 md:space-y-7">
+        {highlights.map(({ skill, proof }) => (
+          <li key={skill}>
+            <p className="text-5xl font-black leading-[0.95] tracking-tight text-white sm:text-6xl md:text-[5vw]">{skill}</p>
+            <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/65 sm:text-base md:text-lg">{proof}</p>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-7 max-w-2xl text-lg font-semibold leading-snug text-white/80 sm:text-xl md:mt-10 md:text-2xl">
+        {more.join("  ·  ")}
+      </p>
     </div>
   );
 }

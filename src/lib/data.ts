@@ -92,28 +92,44 @@ export const experience = [
   },
 ];
 
-/** One world per group in the Signals voyage; `tagline` is its one-line
- *  story under the title. */
-export const skillGroups = [
+/** One world per group in the Signals voyage. `highlights` are its
+ *  headline skills, each with where it was proven; `more` are the rest. */
+export const skillGroups: {
+  label: string;
+  highlights: { skill: string; proof: string }[];
+  more: string[];
+}[] = [
   {
     label: "GenAI & LLMs",
-    tagline: "Agents, retrieval and fine-tuned models that answer in production.",
-    items: ["LangChain", "LlamaIndex", "RAG Pipelines", "ChromaDB", "Fine-Tuning", "Stable Diffusion", "FastAPI"],
+    highlights: [
+      { skill: "RAG Pipelines", proof: "Agentic long-term memory on MongoDB Atlas vector search and ChromaDB" },
+      { skill: "Fine-Tuning", proof: "TinyLlama (QLoRA) behind a 12-language JSON translation pipeline" },
+    ],
+    more: ["LangChain", "LlamaIndex", "ChromaDB", "Stable Diffusion", "FastAPI"],
   },
   {
     label: "ML / AI",
-    tagline: "Models trained, compressed and measured until they earn their place.",
-    items: ["Transformers", "LoRA / PEFT", "BERT", "Quantization", "XGBoost", "EfficientNet", "Scikit-learn"],
+    highlights: [
+      { skill: "LoRA / PEFT", proof: "A classifier that ships a new adapter only when F1 improves" },
+      { skill: "EfficientNet", proof: "Plant disease detection at 97% accuracy over 27K+ images" },
+    ],
+    more: ["Transformers", "BERT", "Quantization", "XGBoost", "Scikit-learn"],
   },
   {
     label: "Data Engineering",
-    tagline: "Pipelines that turn raw events into clean, queryable truth.",
-    items: ["Apache Spark", "PySpark", "Airflow", "Delta Lake", "Kafka", "Databricks"],
+    highlights: [
+      { skill: "Airflow", proof: "Pipelines landing Kinesis events in Delta Lake for LLM observability" },
+      { skill: "PySpark", proof: "Moved the platform off Databricks, keeping distributed compute at lower cost" },
+    ],
+    more: ["Apache Spark", "Delta Lake", "Kafka", "Databricks"],
   },
   {
     label: "Cloud & Data",
-    tagline: "The storage and infrastructure everything else runs on.",
-    items: ["AWS", "MongoDB", "PostgreSQL", "MySQL", "DuckDB", "Trino", "Docker"],
+    highlights: [
+      { skill: "Docker", proof: "Stable Diffusion, Qwen-image and Wan as GPU microservices" },
+      { skill: "AWS", proof: "TensorFlow Serving and FastAPI models in production" },
+    ],
+    more: ["MongoDB", "PostgreSQL", "MySQL", "DuckDB", "Trino"],
   },
 ];
 
