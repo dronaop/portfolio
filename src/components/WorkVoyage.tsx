@@ -188,9 +188,11 @@ function Mission({
 
 function MissionMedia({ project }: { project: Project }) {
   if (!project.media) return null;
+  // Files in public/ live under the site's base path once deployed.
+  const src = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}${project.media.src}`;
   return project.media.type === "video" ? (
     <video
-      src={project.media.src}
+      src={src}
       autoPlay
       muted
       loop
@@ -200,7 +202,7 @@ function MissionMedia({ project }: { project: Project }) {
     />
   ) : (
     <Image
-      src={project.media.src}
+      src={src}
       alt={project.description}
       fill
       sizes="(min-width: 768px) 52vw, 100vw"
