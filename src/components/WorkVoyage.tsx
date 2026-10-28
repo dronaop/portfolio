@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import Image from "next/image";
-import { motion, useReducedMotion, useTransform, type MotionValue } from "framer-motion";
+import { motion, useTransform, type MotionValue } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import { projects, type Project } from "@/lib/data";
 import { heldStation, pacing } from "@/lib/pacing";
 import { usePinnedProgress } from "@/lib/use-pinned-progress";
+import { usePrefersReducedMotion } from "@/lib/use-prefers-reduced-motion";
 import { HorizontalTrack, TrackPanel } from "@/components/ui/horizontal-track";
+import { RevealPoint } from "@/components/ui/reveal-point";
 import { SignalLine } from "@/components/ui/signal-line";
 import type { ShaderUniformSource } from "@/components/ui/animated-shader-hero";
 
@@ -37,7 +39,7 @@ export default function WorkVoyage({
 }) {
   const sectionRef = useRef<HTMLElement>(null);
   const progress = usePinnedProgress(sectionRef);
-  const reduceMotion = useReducedMotion() ?? false;
+  const reduceMotion = usePrefersReducedMotion();
   const vh = useTransform(progress, (p) => p / WORK.at(1));
   const station = useTransform(vh, (v) => heldStation(v, MISSIONS, HOLD, TRAVEL));
 
@@ -132,9 +134,15 @@ function Mission({
 
         <ul className="mt-5 space-y-3 md:mt-7 md:space-y-4">
           {project.bullets.map((bullet, j) => (
-            <Point key={bullet} vh={vh} range={[reveal + 25 + j * 14, reveal + 55 + j * 14]} accent={project.accent} hideOnPhone={j >= 2}>
+            <RevealPoint
+              key={bullet}
+              vh={vh}
+              range={[reveal + 25 + j * 14, reveal + 55 + j * 14]}
+              accent={project.accent}
+              className={j >= 2 ? "hidden md:block" : undefined}
+            >
               {bullet}
-            </Point>
+            </RevealPoint>
           ))}
         </ul>
 
@@ -175,33 +183,6 @@ function Mission({
         </motion.div>
       </div>
     </div>
-  );
-}
-
-/** A mission point that rises in over `range` (vh into the scene). */
-function Point({
-  vh,
-  range,
-  accent,
-  hideOnPhone,
-  children,
-}: {
-  vh: MotionValue<number>;
-  range: [number, number];
-  accent: string;
-  hideOnPhone: boolean;
-  children: string;
-}) {
-  const opacity = useTransform(vh, range, [0, 1]);
-  const y = useTransform(vh, range, [14, 0]);
-  return (
-    <motion.li
-      style={{ opacity, y }}
-      className={`relative pl-5 text-sm leading-relaxed text-white/75 sm:text-base lg:text-lg ${hideOnPhone ? "hidden md:block" : ""}`}
-    >
-      <span aria-hidden className="absolute left-0 top-[0.7em] h-px w-2.5" style={{ background: accent }} />
-      {children}
-    </motion.li>
   );
 }
 

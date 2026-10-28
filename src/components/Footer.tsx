@@ -1,8 +1,12 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Mail, ArrowUpRight } from "lucide-react";
+import { useRef } from "react";
+import { motion, useTransform } from "framer-motion";
+import { ArrowUpRight, Mail } from "lucide-react";
+import { pacing } from "@/lib/pacing";
+import { usePinnedProgress } from "@/lib/use-pinned-progress";
 import { ChapterLabel } from "@/components/ui/chapter-label";
+import { DecodeText } from "@/components/ui/decode-text";
 
 function GithubIcon({ size = 18, className = "" }: { size?: number; className?: string }) {
   return (
@@ -23,114 +27,78 @@ function LinkedinIcon({ size = 18, className = "" }: { size?: number; className?
   );
 }
 
+const EMAIL = "deepanshu.drona@gmail.com";
+
 const socialLinks = [
-  { name: "Email", href: "mailto:deepanshu.drona@gmail.com", icon: Mail, label: "deepanshu.drona@gmail.com" },
-  { name: "GitHub", href: "https://github.com/dronaop", icon: GithubIcon, label: "github.com/dronaop" },
-  { name: "LinkedIn", href: "https://linkedin.com/in/deepanshu-drona", icon: LinkedinIcon, label: "linkedin.com/in/deepanshu-drona" },
+  { name: "GitHub", href: "https://github.com/dronaop", icon: GithubIcon },
+  { name: "LinkedIn", href: "https://linkedin.com/in/deepanshu-drona", icon: LinkedinIcon },
 ];
 
-const quickLinks = [
-  { name: "Work", href: "#work" },
-  { name: "Experience", href: "#experience" },
-  { name: "Contact", href: "#contact" },
-];
+/** The chapter's pinned scroll, in vh (see lib/pacing). */
+const CONTACT = pacing(130);
+const DECODE: [number, number] = [0, 75];
 
+/**
+ * "Contact" chapter, the last screen: a final transmission. Pinned, the
+ * invitation decodes out of noise, then the email and links come in, and
+ * the page ends on it. Links to #contact land on the finished screen.
+ */
 export default function Footer() {
-  const currentYear = new Date().getFullYear();
+  const sectionRef = useRef<HTMLElement>(null);
+  const progress = usePinnedProgress(sectionRef);
+  const vh = useTransform(progress, (p) => p / CONTACT.at(1));
+  const decode = useTransform(vh, DECODE, [0, 1]);
+  const lineOpacity = useTransform(vh, [55, 85], [0, 1]);
+  const lineY = useTransform(vh, [55, 85], [16, 0]);
+  const reachOpacity = useTransform(vh, [70, 105], [0, 1]);
+  const reachY = useTransform(vh, [70, 105], [20, 0]);
 
   return (
-    <footer id="contact" className="relative mt-20 overflow-hidden bg-[#05060a] px-6 pb-8 pt-20 sm:px-10">
-      {/* Gradient Divider */}
-      <div className="absolute left-0 top-0 h-[1px] w-full bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+    <footer ref={sectionRef} className="relative" style={{ height: CONTACT.height }}>
+      {/* Anchor at the end of the scene, so nav links arrive decoded. */}
+      <div id="contact" aria-hidden className="absolute inset-x-0 bottom-0 h-screen" />
 
-      <div className="mx-auto max-w-6xl">
-        <div className="grid grid-cols-1 gap-12 md:grid-cols-3 md:gap-8">
-          
-          {/* CTA Section */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="md:col-span-1"
-          >
-            <ChapterLabel id="contact" className="mb-5" />
-            <h2 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
-              Let&apos;s build <br className="hidden sm:block" />
-              <span className="bg-gradient-to-r from-[#7c8cff] via-[#ff8a5c] to-[#4cd6b0] bg-clip-text text-transparent">something together.</span>
-            </h2>
-            <p className="mt-6 max-w-sm text-base text-white/60">
-              Open to AI/ML roles and interesting collaborations. Always excited to discuss new ideas and solve complex problems.
-            </p>
-          </motion.div>
-
-          {/* Social Links */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-            className="flex flex-col gap-4"
-          >
-            <h3 className="text-sm font-medium uppercase tracking-wider text-white/40">Connect</h3>
-            <div className="flex flex-col gap-3">
-              {socialLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group flex items-center gap-3 text-sm text-white/60 transition-colors hover:text-white"
-                >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/5 transition-colors group-hover:bg-white/10 group-hover:text-[#7c8cff]">
-                    <link.icon size={18} />
-                  </span>
-                  <span className="truncate">{link.label}</span>
-                  <ArrowUpRight size={14} className="opacity-0 -translate-x-2 translate-y-2 transition-all group-hover:opacity-100 group-hover:translate-x-0 group-hover:translate-y-0 text-[#4cd6b0]" />
-                </a>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Quick Nav */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex flex-col gap-4 md:items-end"
-          >
-            <h3 className="text-sm font-medium uppercase tracking-wider text-white/40 md:text-right">Navigation</h3>
-            <div className="flex flex-col gap-3 md:items-end">
-              {quickLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  className="group flex items-center gap-2 text-sm text-white/60 transition-colors hover:text-white"
-                >
-                  {link.name}
-                </a>
-              ))}
-            </div>
-          </motion.div>
-
-        </div>
-
-        {/* Copyright */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5, delay: 0.4 }}
-          className="mt-20 flex flex-col items-center justify-between border-t border-white/10 pt-8 sm:flex-row gap-4"
+      <div className="sticky top-0 flex h-screen flex-col items-center justify-center overflow-hidden px-6 text-center">
+        <ChapterLabel id="contact" />
+        <h2 className="mt-6 max-w-6xl text-balance text-5xl font-black leading-[0.95] tracking-tight text-white sm:text-7xl md:text-[7vw]">
+          <DecodeText text="Let's build something together." progress={decode} />
+        </h2>
+        <motion.p
+          style={{ opacity: lineOpacity, y: lineY }}
+          className="mt-6 max-w-xl text-lg text-white/65 sm:text-xl"
         >
-          <p className="text-xs text-white/40">
-            &copy; {currentYear} Deepanshu Singh. All rights reserved.
-          </p>
-          <p className="text-xs text-white/40">
-            Designed & Built with Next.js & Tailwind
-          </p>
+          Tell me what you&apos;re building.
+        </motion.p>
+
+        <motion.div style={{ opacity: reachOpacity, y: reachY }} className="mt-10 flex flex-col items-center gap-6">
+          <a
+            href={`mailto:${EMAIL}`}
+            className="group inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-[#7c8cff] via-[#ff8a5c] to-[#4cd6b0] px-7 py-4 text-base font-semibold text-black transition-transform duration-300 hover:scale-105 sm:px-9 sm:text-lg"
+          >
+            <Mail size={20} aria-hidden />
+            {EMAIL}
+          </a>
+          <div className="flex items-center gap-6">
+            {socialLinks.map((link) => (
+              <a
+                key={link.name}
+                href={link.href}
+                target="_blank"
+                rel="noreferrer"
+                className="group inline-flex items-center gap-2 text-sm font-medium text-white/60 transition-colors hover:text-white"
+              >
+                <link.icon size={18} />
+                {link.name}
+                <ArrowUpRight size={14} aria-hidden className="transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </a>
+            ))}
+          </div>
         </motion.div>
+
+        <div className="absolute inset-x-6 bottom-6 flex flex-col items-center justify-between gap-1 text-xs text-white/35 sm:inset-x-10 sm:flex-row">
+          <p>&copy; {new Date().getFullYear()} Deepanshu Singh</p>
+          <p>Built with Next.js, three.js and WebGL</p>
+        </div>
       </div>
     </footer>
   );

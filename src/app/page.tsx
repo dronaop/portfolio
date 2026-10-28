@@ -1,6 +1,5 @@
 import Nav from "@/components/Nav";
 import SpaceScene from "@/components/SpaceScene";
-import Experience from "@/components/Experience";
 import Footer from "@/components/Footer";
 
 export default function Page() {
@@ -8,7 +7,6 @@ export default function Page() {
     <>
       <Nav />
       <SpaceScene />
-      <Experience />
       <Footer />
     </>
   );

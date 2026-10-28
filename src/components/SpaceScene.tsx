@@ -10,10 +10,12 @@ import {
 import Hero, { HERO, WARP_VH } from "@/components/Hero";
 import SkillsVoyage from "@/components/SkillsVoyage";
 import WorkVoyage from "@/components/WorkVoyage";
+import Experience from "@/components/Experience";
 import { usePinnedProgress } from "@/lib/use-pinned-progress";
 
 /**
- * Hero, Signals voyage and Work missions over one shared, fixed space backdrop (the WebGL
+ * Hero, Signals voyage, Work missions and the Journey over one shared, fixed
+ * space backdrop (the WebGL
  * shader), which stays behind the whole page so every chapter after them
  * is still in the same space. Both sections are transparent:
  *
@@ -24,7 +26,8 @@ import { usePinnedProgress } from "@/lib/use-pinned-progress";
  *    viewer, rush toward them between its worlds, pan sideways with its 3D
  *    camera, and bend around its black hole (see SkillsVoyage, which feeds
  *    those uniforms).
- * 3. Missions — behind Work the sky keeps panning with its sideways travel.
+ * 3. Missions and Journey — the sky keeps panning with their sideways
+ *    travel.
  * 4. After — the settled, dimmed sky stays behind the rest of the page.
  */
 const WARP_END = HERO.at(WARP_VH);
@@ -55,6 +58,7 @@ export default function SpaceScene() {
   const streakRef = useRef(0);
   const skillUniformsRef = useRef<ShaderUniformSource | null>(null);
   const workUniformsRef = useRef<ShaderUniformSource | null>(null);
+  const journeyUniformsRef = useRef<ShaderUniformSource | null>(null);
   const getShaderUniforms = useCallback((now: number): Partial<ShaderUniforms> => {
     const p = smoothHero.get();
     const warp = clamp01(p / WARP_END);
@@ -63,9 +67,9 @@ export default function SpaceScene() {
     // Tames the bright drifting lights so tool names stay readable over them.
     const soften = settle;
     const skills = skillUniformsRef.current?.(now);
-    const work = workUniformsRef.current?.(now);
-    // Work picks up the pan where Signals left it.
-    const pan = (skills?.pan ?? 0) + (work?.pan ?? 0);
+    // The later chapters pick up the pan (and drift) where Signals left it.
+    const later = [workUniformsRef, journeyUniformsRef].map((source) => source.current?.(now));
+    const pan = later.reduce((sum, u) => sum + (u?.pan ?? 0), skills?.pan ?? 0);
     if (reduceMotion) return { dim, soften, ...skills, pan };
 
     // Scroll speed in screen-heights per second; about 60 a second is a
@@ -81,8 +85,7 @@ export default function SpaceScene() {
       travel:
         easeInOut(warp) * WARP_DISTANCE +
         driftProgress.get() * DRIFT_DISTANCE +
-        (skills?.travel ?? 0) +
-        (work?.travel ?? 0),
+        later.reduce((sum, u) => sum + (u?.travel ?? 0), skills?.travel ?? 0),
       zoom: easeIn(warp),
       streak: streakRef.current,
       dim,
@@ -100,6 +103,7 @@ export default function SpaceScene() {
       <Hero sectionRef={heroRef} />
       <SkillsVoyage sectionRef={skillsRef} shaderUniformsRef={skillUniformsRef} />
       <WorkVoyage shaderUniformsRef={workUniformsRef} />
+      <Experience shaderUniformsRef={journeyUniformsRef} />
     </>
   );
 }

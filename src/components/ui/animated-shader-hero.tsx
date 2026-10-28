@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 
 /**
  * Full-bleed WebGL2 shader hero (adapted from Matthias Hurrle's @atzedent
- * shader). `ShaderBackground` is the reusable canvas; `Hero` is the original
- * drop-in layout built on top of it.
+ * shader). `ShaderBackground` is the canvas the page's space backdrop draws
+ * with.
  *
  * The shader has been retinted to the site palette and extended with a
  * depth-layered starfield plus a few uniforms so callers (e.g. a scroll
@@ -216,101 +216,6 @@ export function ShaderBackground({ className, getUniforms }: ShaderBackgroundPro
       className={cn("pointer-events-none absolute inset-0 h-full w-full", className)}
       aria-hidden
     />
-  );
-}
-
-// Types for component props
-interface HeroProps {
-  trustBadge?: {
-    text: string;
-    icons?: string[];
-  };
-  headline: {
-    line1: string;
-    line2: string;
-  };
-  subtitle: string;
-  buttons?: {
-    primary?: {
-      text: string;
-      onClick?: () => void;
-    };
-    secondary?: {
-      text: string;
-      onClick?: () => void;
-    };
-  };
-  className?: string;
-}
-
-const BADGE_ICON_COLORS = ["text-[#7c8cff]", "text-[#ff8a5c]", "text-[#4cd6b0]"];
-
-// Reusable Hero Component
-export default function Hero({ trustBadge, headline, subtitle, buttons, className }: HeroProps) {
-  return (
-    <div className={cn("relative h-screen w-full overflow-hidden bg-black", className)}>
-      <ShaderBackground />
-
-      {/* Hero Content Overlay */}
-      <div className="absolute inset-0 z-10 flex flex-col items-center justify-center text-white">
-        {trustBadge && (
-          <div className="mb-8 animate-fade-in-down">
-            <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm backdrop-blur-md">
-              {trustBadge.icons && (
-                <div className="flex">
-                  {trustBadge.icons.map((icon, index) => (
-                    <span key={index} className={BADGE_ICON_COLORS[index % BADGE_ICON_COLORS.length]}>
-                      {icon}
-                    </span>
-                  ))}
-                </div>
-              )}
-              <span className="text-white/80">{trustBadge.text}</span>
-            </div>
-          </div>
-        )}
-
-        <div className="mx-auto max-w-5xl space-y-6 px-4 text-center">
-          <div className="space-y-2">
-            <h1 className="animate-fade-in-up animation-delay-200 bg-gradient-to-r from-[#7c8cff] via-[#a5b0ff] to-[#4cd6b0] bg-clip-text text-5xl font-bold text-transparent md:text-7xl lg:text-8xl">
-              {headline.line1}
-            </h1>
-            <h1 className="animate-fade-in-up animation-delay-400 bg-gradient-to-r from-[#ff8a5c] via-[#ffb38f] to-[#7c8cff] bg-clip-text text-5xl font-bold text-transparent md:text-7xl lg:text-8xl">
-              {headline.line2}
-            </h1>
-          </div>
-
-          <div className="animate-fade-in-up animation-delay-600 mx-auto max-w-3xl">
-            <p className="text-lg font-light leading-relaxed text-white/75 md:text-xl lg:text-2xl">
-              {subtitle}
-            </p>
-          </div>
-
-          {buttons && (
-            <div className="animate-fade-in-up animation-delay-800 mt-10 flex flex-col justify-center gap-4 sm:flex-row">
-              {buttons.primary && (
-                <button
-                  type="button"
-                  onClick={buttons.primary.onClick}
-                  className="rounded-full bg-gradient-to-r from-[#7c8cff] to-[#4cd6b0] px-8 py-4 text-lg font-semibold text-black transition-all duration-300 hover:scale-105 hover:shadow-xl hover:shadow-[#7c8cff]/25"
-                >
-                  {buttons.primary.text}
-                </button>
-              )}
-              {buttons.secondary && (
-                <button
-                  type="button"
-                  onClick={buttons.secondary.onClick}
-                  className="rounded-full border border-white/20 bg-white/5 px-8 py-4 text-lg font-semibold text-white/90 backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:border-white/40 hover:bg-white/10"
-                >
-                  {buttons.secondary.text}
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
   );
 }
 

@@ -139,32 +139,3 @@ export const skillGroups: {
     more: ["MongoDB", "PostgreSQL", "MySQL", "DuckDB", "Trino"],
   },
 ];
-
-export type NetworkProject = {
-  /** Short name drawn beside the project's star. */
-  name: string;
-  /** Set for projects that also have a Work chapter (matches Project.slug). */
-  slug?: string;
-  /** Skills (exact `skillGroups` item names) actually used in this project. */
-  skills: string[];
-};
-
-/** Which skills went into which project. */
-export const networkProjects: NetworkProject[] = [
-  {
-    name: "Emotion Classifier",
-    slug: "emotion-classifier",
-    skills: ["Transformers", "LoRA / PEFT", "Fine-Tuning", "Quantization", "Scikit-learn"],
-  },
-  { name: "Churn Leakage Eval", skills: ["Scikit-learn", "Docker"] },
-  {
-    name: "LLM Observability",
-    slug: "llm-observability",
-    skills: ["Apache Spark", "PySpark", "Airflow", "Delta Lake", "Trino", "Databricks", "Docker"],
-  },
-  {
-    name: "Plant Easy Care",
-    slug: "plant-easy-care",
-    skills: ["EfficientNet", "FastAPI", "AWS", "MongoDB"],
-  },
-];

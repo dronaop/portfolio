@@ -43,64 +43,6 @@ body {
   background: #555;
 }
 
-/* Utilities */
-.glass-card {
-  background: rgba(255,255,255,0.02);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 1rem;
-}
-
-.gradient-text {
-  background: linear-gradient(135deg, #7c8cff, #ff8a5c, #4cd6b0);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.glow-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  position: relative;
-  background: #7c8cff;
-}
-
-.glow-dot::after {
-  content: "";
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  background: inherit;
-  filter: blur(6px);
-  opacity: 0.6;
-  animation: pulse-glow 2s ease-in-out infinite alternate;
-}
-
-@keyframes pulse-glow {
-  0% {
-    opacity: 0.4;
-    transform: scale(0.8);
-  }
-  100% {
-    opacity: 0.8;
-    transform: scale(1.2);
-  }
-}
-
-.section-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(124,140,255,0.3), rgba(255,138,92,0.3), transparent);
-}
-
-.hover-glow {
-  transition: box-shadow 0.3s ease;
-}
-
-.hover-glow:hover {
-  box-shadow: 0 0 15px rgba(124, 140, 255, 0.3);
-}
-
 /* Hero background */
 .gradient-fallback {
   background: linear-gradient(120deg, #1a1d2e, #05060a 55%, #251a2e);
@@ -117,38 +59,5 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .gradient-fallback {
     animation: none;
-  }
-}
-
-/* Shader hero entrance (components/ui/animated-shader-hero) */
-@keyframes fade-in-down {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in-down {
-  animation: fade-in-down 0.8s ease-out forwards;
-}
-
-.animate-fade-in-up {
-  animation: fade-in-up 0.8s ease-out forwards;
-  opacity: 0;
-}
-
-.animation-delay-200 { animation-delay: 0.2s; }
-.animation-delay-400 { animation-delay: 0.4s; }
-.animation-delay-600 { animation-delay: 0.6s; }
-.animation-delay-800 { animation-delay: 0.8s; }
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-fade-in-down,
-  .animate-fade-in-up {
-    animation: none;
-    opacity: 1;
   }
 }
